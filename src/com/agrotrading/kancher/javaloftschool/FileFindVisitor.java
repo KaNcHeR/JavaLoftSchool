@@ -16,6 +16,7 @@ public class FileFindVisitor extends SimpleFileVisitor<Path> {
     Pattern linePattern;
     PathMatcher matcher;
     ExecutorService es = Executors.newCachedThreadPool();
+
     List<Callable<Void>> calls = new ArrayList<>();
     Collection<String> col;
 
@@ -28,6 +29,7 @@ public class FileFindVisitor extends SimpleFileVisitor<Path> {
             System.err.println("Invalid pattern; did you forget to prefix \"glob:\" or \"regex:\"?");
             System.exit(1);
         }
+
         this.col = col;
         this.linePattern = linePattern;
     }
@@ -48,8 +50,8 @@ public class FileFindVisitor extends SimpleFileVisitor<Path> {
         Path name = path.getFileName();
         if (matcher.matches(name)) {
             ReadFiles readFiles = new ReadFiles(path, linePattern, col);
-            calls.add(readFiles);
             es.submit(readFiles);
+            calls.add(readFiles);
         }
     }
 

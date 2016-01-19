@@ -1,5 +1,7 @@
 package com.agrotrading.kancher.javaloftschool;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
@@ -12,45 +14,48 @@ public class Main {
         String strWord;
         List<String> tsStr = new ArrayList<>();
         Collection<String> syncCol = Collections.synchronizedCollection(tsStr);
+        FileFindVisitor fileFindVisitor;
         Path folder;
 
         while (true) {
 
-            strWord = userEnterCommand();
+            strWord = userEnterCommand(StringApp.enterCommandAlert);
 
-            if(checkExit(strWord, syncCol)) {
-                break;
-            }
+            if(checkExit(strWord, syncCol)) break;
 
-            if((args = splitArgs(strWord)) == null) {
-                continue;
-            }
+            if((args = splitArgs(strWord)) == null) continue;
 
-            if((folder = checkFolder(args[0])) == null) {
-                continue;
-            }
+            if((folder = checkFolder(args[0], false)) == null) continue;
 
-            try {
-                syncCol.add(String.format(StringApp.resultRequestOutputHeader, strWord));
-                FileFindVisitor fileFindVisitor = new FileFindVisitor(syncCol, Pattern.compile(args[1]));
-                System.out.print(StringApp.waitPool);
-                Files.walkFileTree(folder, fileFindVisitor);
-                fileFindVisitor.getResult();
-                syncCol.add(StringApp.resultRequestOutputFooter);
-                System.out.println(StringApp.done);
+            syncCol.add(String.format(StringApp.resultRequestOutputHeader, strWord));
 
-            } catch (IOException e) {
-                System.out.println(e.getMessage());
-            }
+            fileFindVisitor = new FileFindVisitor(syncCol, Pattern.compile(args[1]));
 
+            startTask(fileFindVisitor, folder);
+
+            syncCol.add(StringApp.resultRequestOutputFooter);
         }
     }
 
-    private static String userEnterCommand() {
+    private static void startTask(FileFindVisitor fileFindVisitor, Path folder) {
+
+        try {
+            System.out.print(StringApp.waitListFiles);
+            Files.walkFileTree(folder, fileFindVisitor);
+            System.out.print(StringApp.done);
+            System.out.print(StringApp.waitPool);
+            fileFindVisitor.getResult();
+            System.out.println(StringApp.done);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static String userEnterCommand(String alert) {
         byte word [] = new byte[256];
         int counterChar;
 
-        System.out.print(StringApp.enterCommandAlert);
+        System.out.print(alert);
 
         try {
             counterChar = System.in.read(word);
@@ -72,7 +77,7 @@ public class Main {
         return args;
     }
 
-    private static Path checkFolder(String path) {
+    private static Path checkFolder(String path, boolean write) {
 
         Path folder = Paths.get(path);
 
@@ -82,6 +87,9 @@ public class Main {
         } else if(!Files.isDirectory(folder, LinkOption.NOFOLLOW_LINKS)) {
             System.out.println(StringApp.errorFileItem);
             return null;
+        } else if(write && !Files.isWritable(folder)) {
+            System.out.println(StringApp.errorFolderWrite);
+            return null;
         }
 
         return folder;
@@ -90,8 +98,31 @@ public class Main {
     private static boolean checkExit(String strWord, Collection<String> col) {
 
         if (StringApp.exitCommand.equalsIgnoreCase(strWord)) {
-            for(String item : col) {
-                System.out.println(item);
+            if(col.size() > 0) {
+                Path folder;
+                Path savePath;
+                BufferedWriter bufferedWriter;
+                while(true) {
+                    strWord = userEnterCommand(StringApp.enterPathSaveAlert);
+                    if ((folder = checkFolder(strWord, true)) == null) continue;
+                    savePath = Paths.get(folder.toString(), String.format(StringApp.templateOutputFile, new Date().getTime()));
+
+                    try {
+                        Files.createFile(savePath);
+                        bufferedWriter = new BufferedWriter(new FileWriter(savePath.toFile()));
+                        System.out.print(String.format(StringApp.waitSaveOutputFile, savePath.toString()));
+                        for(String item : col) {
+                            bufferedWriter.write(item);
+                            bufferedWriter.newLine();
+                        }
+                        bufferedWriter.close();
+                        System.out.print(StringApp.done);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    break;
+                }
             }
             System.out.print(StringApp.goodbye);
             return true;

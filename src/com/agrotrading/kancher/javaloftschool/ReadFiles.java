@@ -4,7 +4,6 @@ import java.io.*;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.concurrent.Callable;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ReadFiles implements Callable<Void> {
@@ -23,19 +22,18 @@ public class ReadFiles implements Callable<Void> {
     public Void call() throws Exception {
 
         try {
-            System.out.println("Работает поток с файлом " + path.getFileName());
             BufferedReader br = new BufferedReader(new FileReader(path.toFile()));
-            String line = br.readLine();
             int count = 0;
-            Matcher matcher;
+            String line = br.readLine();
 
             while (line != null) {
-                matcher = linePattern.matcher(line);
-                if(matcher.matches()) {
+                if(linePattern.matcher(line).matches()) {
                     count++;
                 }
                 line = br.readLine();
             }
+
+            br.close();
 
             if(count > 0) {
                 synchronized(col) {
